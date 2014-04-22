@@ -27,6 +27,7 @@ import com.google.inject.Injector;
  * response - proxy should send the response back to the client
  * 
  */
+@SuppressWarnings("deprecation")
 public class BasicTest {
 
 	private final static String requestedURL = "http://jquery.com/index.html";

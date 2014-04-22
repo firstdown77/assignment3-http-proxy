@@ -163,6 +163,7 @@ public class Cache implements ICache {
 			HttpResponse res = new BasicHttpResponse(HttpVersion.HTTP_1_1,
 					HttpStatus.SC_OK, "OK");
 			String headers = rs.getString("headers");
+			@SuppressWarnings("resource")
 			Scanner scanner = new Scanner(headers);
 			scanner.useDelimiter("\r\n");
 			while (scanner.hasNext()) {

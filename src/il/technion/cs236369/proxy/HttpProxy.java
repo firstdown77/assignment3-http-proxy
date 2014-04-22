@@ -16,10 +16,13 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.name.Named;
+import org.apache.http.*;
 
 public class HttpProxy extends AbstractHttpProxy {
 	ServerSocket serverSocket;
 	Socket clientSocket;
+	PrintWriter out;
+	BufferedReader in;
 	
 	@Inject
 	HttpProxy(SocketFactory sockFactory, ServerSocketFactory srvSockFactory,
@@ -41,18 +44,22 @@ public class HttpProxy extends AbstractHttpProxy {
 	//I have been looking at this tutorial: 
 	//docs.oracle.com/javase/tutorial/displayCode.html?code=http://docs.oracle.com/javase/tutorial/networking/sockets/examples/KnockKnockServer.java
 	public void bind() throws IOException {
-		serverSocket = srvSockFactory.createServerSocket(port);
+		serverSocket = srvSockFactory.createServerSocket(port); //This does the bind.
 		clientSocket = sockFactory.createSocket();
-        PrintWriter out =
-                new PrintWriter(clientSocket.getOutputStream(), true);
-            BufferedReader in = new BufferedReader(
+		
+        out = new PrintWriter(clientSocket.getOutputStream(), true);
+        in = new BufferedReader(
                 new InputStreamReader(clientSocket.getInputStream()));
-                           
-            String inputLine, outputLine;
 	}
 
 	@Override
 	public void start() {
+		/* We'll need to get cache entries from previous instances of the proxy. */
+		//String[] = ourDatabase.getPreviousCacheEntries();  
+        String inputLine, outputLine;
+        // Initiate conversation with client
+        
+        //Need to use HTTPCore here.
 		while (true) {
 			
 		}
