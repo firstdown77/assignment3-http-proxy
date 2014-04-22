@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Properties;
@@ -20,7 +19,7 @@ import com.google.inject.name.Named;
 public class HttpProxy extends AbstractHttpProxy {
 	ServerSocket serverSocket;
 	Socket clientSocket;
-	PrintWriter out;
+	//PrintWriter out;
 	BufferedReader in;
 	
 	@Inject
@@ -43,40 +42,18 @@ public class HttpProxy extends AbstractHttpProxy {
 	//I have been looking at this tutorial: 
 	//docs.oracle.com/javase/tutorial/displayCode.html?code=http://docs.oracle.com/javase/tutorial/networking/sockets/examples/KnockKnockServer.java
 	public void bind() throws IOException {
-		serverSocket = srvSockFactory.createServerSocket(port); //This does the bind.
+		serverSocket = srvSockFactory.createServerSocket(port); //This line does the bind.
 		clientSocket = sockFactory.createSocket();
 		clientSocket.connect(serverSocket.getLocalSocketAddress());
-		
-        out = new PrintWriter(clientSocket.getOutputStream(), true);
-        in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 	}
 
 	@Override
 	public void start() {
 		/* We'll need to get cache entries from previous instances of the proxy. */
 		//String[] = ourDatabase.getPreviousCacheEntries();  
-        String inputLine;
-        String outputLine;
-        // Initiate conversation with client
-        
-        // Initiate conversation with client
-        KnockKnockProtocol kkp = new KnockKnockProtocol();
-        outputLine = kkp.processInput(null);
-        out.println(outputLine);
-
-        try {
-			while ((inputLine = in.readLine()) != null) {
-			    outputLine = kkp.processInput(inputLine);
-			    out.println(outputLine);
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
         //Need to use HTTPCore here.
 		//while (true) {	
 		//}
-		
 	}
 
 	public static void main(String[] args) throws Exception {
