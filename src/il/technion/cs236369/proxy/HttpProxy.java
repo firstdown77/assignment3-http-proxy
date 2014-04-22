@@ -16,7 +16,6 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.name.Named;
-import org.apache.http.*;
 
 public class HttpProxy extends AbstractHttpProxy {
 	ServerSocket serverSocket;
@@ -46,23 +45,37 @@ public class HttpProxy extends AbstractHttpProxy {
 	public void bind() throws IOException {
 		serverSocket = srvSockFactory.createServerSocket(port); //This does the bind.
 		clientSocket = sockFactory.createSocket();
+		clientSocket.connect(serverSocket.getLocalSocketAddress());
 		
         out = new PrintWriter(clientSocket.getOutputStream(), true);
-        in = new BufferedReader(
-                new InputStreamReader(clientSocket.getInputStream()));
+        in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 	}
 
 	@Override
 	public void start() {
 		/* We'll need to get cache entries from previous instances of the proxy. */
 		//String[] = ourDatabase.getPreviousCacheEntries();  
-        String inputLine, outputLine;
+        String inputLine;
+        String outputLine;
         // Initiate conversation with client
         
-        //Need to use HTTPCore here.
-		while (true) {
-			
+        // Initiate conversation with client
+        KnockKnockProtocol kkp = new KnockKnockProtocol();
+        outputLine = kkp.processInput(null);
+        out.println(outputLine);
+
+        try {
+			while ((inputLine = in.readLine()) != null) {
+			    outputLine = kkp.processInput(inputLine);
+			    out.println(outputLine);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+        //Need to use HTTPCore here.
+		//while (true) {	
+		//}
 		
 	}
 
