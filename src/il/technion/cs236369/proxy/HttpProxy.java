@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
 import java.util.Properties;
 
 import javax.net.ServerSocketFactory;
@@ -37,6 +38,10 @@ public class HttpProxy extends AbstractHttpProxy {
 		// Add your code here
 	}
 
+	public void receiveRequestFromClientSocket(HashMap<String, String> hm) {
+		
+	}
+	
 	@Override
 	//I have been looking at this tutorial: 
 	//docs.oracle.com/javase/tutorial/displayCode.html?code=http://docs.oracle.com/javase/tutorial/networking/sockets/examples/KnockKnockServer.java
