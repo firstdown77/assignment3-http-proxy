@@ -1,10 +1,10 @@
 package il.technion.cs236369.proxy;
 
-import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Properties;
 
@@ -19,8 +19,6 @@ import com.google.inject.name.Named;
 public class HttpProxy extends AbstractHttpProxy {
 	ServerSocket serverSocket;
 	Socket clientSocket;
-	//PrintWriter out;
-	BufferedReader in;
 	
 	@Inject
 	HttpProxy(SocketFactory sockFactory, ServerSocketFactory srvSockFactory,
@@ -40,6 +38,19 @@ public class HttpProxy extends AbstractHttpProxy {
 
 	public void receiveRequestFromClientSocket(HashMap<String, String> hm) {
 		
+	}
+	
+	public Socket createClientSocket(String host) {
+		try {
+			return sockFactory.createSocket(host, port);
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
 	}
 	
 	@Override

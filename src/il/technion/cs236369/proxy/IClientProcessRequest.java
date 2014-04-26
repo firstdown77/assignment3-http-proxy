@@ -15,6 +15,9 @@ public interface IClientProcessRequest {
 	 * This method should send a HashMap<String, String> to the
 	 * receiveRequestFromClientSocket() method in the HttpProxy class.
 	 * 
+	 * This method should take advantage of the createClientSocket(String host)
+	 * method in the HttpProxy class that is a parameter of the method.
+	 * 
 	 * The HashMap contains the following according to the assignment instructions:
 	 * 1. URL
 	 * 2. headers
@@ -25,5 +28,4 @@ public interface IClientProcessRequest {
 	 * all of this in a single String instead.
 	 */
 	void sendRequestToServerSocket(HttpProxy serverSocketClass);
-
 }
