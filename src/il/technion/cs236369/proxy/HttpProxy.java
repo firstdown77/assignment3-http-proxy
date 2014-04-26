@@ -18,7 +18,6 @@ import com.google.inject.name.Named;
 
 public class HttpProxy extends AbstractHttpProxy {
 	ServerSocket serverSocket;
-	Socket clientSocket;
 	
 	@Inject
 	HttpProxy(SocketFactory sockFactory, ServerSocketFactory srvSockFactory,
@@ -40,9 +39,17 @@ public class HttpProxy extends AbstractHttpProxy {
 		
 	}
 	
+	/**
+	 * Creates a client socket and connects it to the server socket.
+	 * @param host The website hostname.
+	 * @return A new client socket connected with the server socket,
+	 * both sockets having the same port number.
+	 */
 	public Socket createClientSocket(String host) {
 		try {
-			return sockFactory.createSocket(host, port);
+			Socket clientSocket = sockFactory.createSocket(host, port);
+			clientSocket.connect(serverSocket.getLocalSocketAddress());
+			return clientSocket;
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
