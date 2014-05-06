@@ -1,24 +1,35 @@
 package il.technion.cs236369.proxy;
 
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Properties;
 
 import javax.net.ServerSocketFactory;
 import javax.net.SocketFactory;
+
+import org.apache.http.ConnectionReuseStrategy;
+import org.apache.http.HttpException;
+import org.apache.http.HttpHost;
+import org.apache.http.HttpResponse;
+import org.apache.http.impl.DefaultBHttpClientConnection;
+import org.apache.http.impl.DefaultConnectionReuseStrategy;
+import org.apache.http.message.BasicHttpRequest;
+import org.apache.http.protocol.HttpCoreContext;
+import org.apache.http.protocol.HttpProcessor;
+import org.apache.http.protocol.HttpProcessorBuilder;
+import org.apache.http.protocol.HttpRequestExecutor;
+import org.apache.http.protocol.RequestConnControl;
+import org.apache.http.protocol.RequestContent;
+import org.apache.http.protocol.RequestExpectContinue;
+import org.apache.http.protocol.RequestTargetHost;
+import org.apache.http.protocol.RequestUserAgent;
+import org.apache.http.util.EntityUtils;
 
 import com.google.inject.Guice;
 import com.google.inject.Inject;
@@ -95,9 +106,177 @@ public class HttpProxy extends AbstractHttpProxy {
 	public void start() {
 		/* We'll need to get cache entries from previous instances of the proxy. */
 		//String[] = ourDatabase.getPreviousCacheEntries();  
-        //Need to use HTTPCore here.
-		System.out.println("FileServer accepting connections on port " + port);
+        HttpProcessor httpproc = HttpProcessorBuilder.create()
+                .add(new RequestContent())
+                .add(new RequestTargetHost())
+                .add(new RequestConnControl())
+                .add(new RequestUserAgent("Test/1.1"))
+                .add(new RequestExpectContinue(true)).build();
+
+            HttpRequestExecutor httpexecutor = new HttpRequestExecutor();
+
+            HttpCoreContext coreContext = HttpCoreContext.create();
+            HttpHost host = new HttpHost("localhost", port);
+            coreContext.setTargetHost(host);
+            
+            DefaultBHttpClientConnection conn = new DefaultBHttpClientConnection(8 * 1024);
+            ConnectionReuseStrategy connStrategy = DefaultConnectionReuseStrategy.INSTANCE;
+            while (true) {
+            	try {
+                    if (!conn.isOpen()) {
+        				Socket socket = serverSocket.accept();
+        	            conn.bind(socket);
+        				BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        				String firstLine = in.readLine();
+        				if (!firstLine.startsWith("GET") || firstLine.length()<14 ||
+        					    !(firstLine.endsWith("HTTP/1.1") || firstLine.endsWith("HTTP/1.0"))) {
+        					System.out.println("Bad request");
+        				}
+        			    String req = firstLine.substring(4, firstLine.length()-9).trim();
+        			    if (req.indexOf("..")!=-1 || 
+        				req.indexOf("/.ht")!=-1 || req.endsWith("~")) {
+        			    	System.out.println("Probably a hacker");
+        			    }
+        	            BasicHttpRequest request = new BasicHttpRequest("GET", req);
+                        System.out.println(">> Request URI: " + request.getRequestLine().getUri());
+                        String newLine;
+                        //Print the rest of the request.
+                        while (((newLine = in.readLine()) != null) && newLine.length() != 0) {
+                        	int colonIndex = newLine.indexOf(":");
+                        	String headerName = newLine.substring(0, colonIndex);
+                        	String headerValue = newLine.substring(colonIndex+2, newLine.length());
+                        	request.addHeader(headerName, headerValue);
+                        }
+                        HttpResponse response = null;
+                        try {
+							httpexecutor.preProcess(request, httpproc, coreContext);
+	                        response = httpexecutor.execute(request, conn, coreContext);
+	                        httpexecutor.postProcess(response, httpproc, coreContext);
+						} catch (HttpException e) {
+							e.printStackTrace();
+						}
+
+
+                        System.out.println("<< Response: " + response.getStatusLine());
+                        System.out.println(EntityUtils.toString(response.getEntity()));
+                        System.out.println("==============");
+                        if (!connStrategy.keepAlive(response, coreContext)) {
+                            conn.close();
+                        } else {
+                            System.out.println("Connection kept alive...");
+                        }
+                    }
+                    
+            	} catch (IOException e) {
+					e.printStackTrace();
+            	}
+                finally {
+                    try {
+						conn.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+                }
+            }
+    }
+		
+		
 		// request handler loop
+		// ------
+		/*
+		HttpRequest hRequest = new BasicHttpRequest("GET", "/", HttpVersion.HTTP_1_1);			
+		System.out.println(hRequest.getRequestLine().getMethod());
+		System.out.println(hRequest.getRequestLine().getUri());
+		System.out.println(hRequest.getProtocolVersion());
+		System.out.println(hRequest.getRequestLine().toString());
+		
+		HttpResponse hResponse = new BasicHttpResponse(HttpVersion.HTTP_1_1, HttpStatus.SC_OK, "OK");
+		System.out.println(hResponse.getProtocolVersion());
+		System.out.println(hResponse.getStatusLine().getStatusCode());
+		System.out.println(hResponse.getStatusLine().getReasonPhrase());
+		System.out.println(hResponse.getStatusLine().toString());
+		
+		hResponse.addHeader("Set-Cookie", "c1=a; path=/; domain=localhost");
+		hResponse.addHeader("Set-Cookie", "c2=b; path=\"/\", c3=c; domain=\"localhost\"");
+		Header h1 = hResponse.getFirstHeader("Set-Cookie");
+		System.out.println(h1);
+		Header h2 = hResponse.getLastHeader("Set-Cookie");
+		System.out.println(h2);
+		Header[] hs = hResponse.getHeaders("Set-Cookie");
+		System.out.println(hs.length);
+		HeaderIterator it = hResponse.headerIterator("Set-Cookie");
+		while (it.hasNext()) {
+			 System.out.println(it.next());
+		}
+		HeaderElementIterator it2 = new BasicHeaderElementIterator(hResponse.headerIterator("Set-Cookie"));
+		while (it2.hasNext()) {
+			 HeaderElement elem = it2.nextElement();
+			 System.out.println(elem.getName() + " = " + elem.getValue());
+			 NameValuePair[] params = elem.getParameters();
+			 for (int i = 0; i < params.length; i++) {
+				 System.out.println(" " + params[i]);
+			 }
+		}
+		StringEntity myEntity = new StringEntity("important message", Consts.UTF_8);
+		System.out.println(myEntity.getContentType());
+		System.out.println(myEntity.getContentLength());
+		try {
+			System.out.println(EntityUtils.toString(myEntity));
+			System.out.println(EntityUtils.toByteArray(myEntity).length);
+		} catch (ParseException e1) {
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+		HttpEntity entity = hResponse.getEntity();
+		if (entity != null) {
+			 InputStream instream = null;
+			try {
+				instream = entity.getContent();
+			} catch (IllegalStateException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			finally {
+				 try {
+					instream.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			 }
+		}
+		*/
+		/*
+		HttpClientConnection h = null;
+		HttpProcessor httpproc = HttpProcessorBuilder.create()
+				.add(new RequestContent())
+				.add(new RequestTargetHost())
+				.add(new RequestConnControl())
+				.add(new RequestUserAgent("MyClient/1.1"))
+				.add(new RequestExpectContinue(true))
+				.build();
+				HttpRequestExecutor httpexecutor = new HttpRequestExecutor();
+				HttpRequest request2 = new BasicHttpRequest("GET", "/");
+				HttpCoreContext context = HttpCoreContext.create();
+				try {
+					httpexecutor.preProcess(request2, httpproc, context);
+					HttpResponse response = httpexecutor.execute(request2, h, context);
+					httpexecutor.postProcess(response, httpproc, context);
+					HttpEntity entity2 = response.getEntity();
+					EntityUtils.consume(entity2);
+				} catch (HttpException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+	}
+	*/
+
+		//-----
+				/*
 		while (true) {
 		    Socket connection = null;
 		    try {
@@ -106,6 +285,8 @@ public class HttpProxy extends AbstractHttpProxy {
 			BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 			OutputStream out = new BufferedOutputStream(connection.getOutputStream());
 			PrintStream pout = new PrintStream(out);
+			
+
 			
 			// read first line of request (ignore the rest)
 			String request = in.readLine();
@@ -219,7 +400,7 @@ public class HttpProxy extends AbstractHttpProxy {
 			out.write(buffer, 0, file.read(buffer));
 		} catch (IOException e) { System.err.println(e); }
 	    }
-
+*/
 	public static void main(String[] args) throws Exception {
 		Properties p = new Properties();
 		p.load(new FileInputStream("config"));
