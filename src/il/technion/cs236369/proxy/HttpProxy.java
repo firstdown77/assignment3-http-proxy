@@ -6,30 +6,28 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Properties;
 
 import javax.net.ServerSocketFactory;
 import javax.net.SocketFactory;
 
-import org.apache.http.ConnectionReuseStrategy;
+import org.apache.http.HttpConnectionFactory;
 import org.apache.http.HttpException;
-import org.apache.http.HttpHost;
-import org.apache.http.HttpResponse;
-import org.apache.http.impl.DefaultBHttpClientConnection;
-import org.apache.http.impl.DefaultConnectionReuseStrategy;
+import org.apache.http.HttpServerConnection;
+import org.apache.http.impl.DefaultBHttpServerConnection;
+import org.apache.http.impl.DefaultBHttpServerConnectionFactory;
 import org.apache.http.message.BasicHttpRequest;
-import org.apache.http.protocol.HttpCoreContext;
+import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpProcessor;
 import org.apache.http.protocol.HttpProcessorBuilder;
-import org.apache.http.protocol.HttpRequestExecutor;
-import org.apache.http.protocol.RequestConnControl;
-import org.apache.http.protocol.RequestContent;
-import org.apache.http.protocol.RequestExpectContinue;
-import org.apache.http.protocol.RequestTargetHost;
-import org.apache.http.protocol.RequestUserAgent;
-import org.apache.http.util.EntityUtils;
+import org.apache.http.protocol.HttpRequestHandler;
+import org.apache.http.protocol.HttpService;
+import org.apache.http.protocol.ResponseConnControl;
+import org.apache.http.protocol.ResponseContent;
+import org.apache.http.protocol.ResponseDate;
+import org.apache.http.protocol.ResponseServer;
+import org.apache.http.protocol.UriHttpRequestHandlerMapper;
 
 import com.google.inject.Guice;
 import com.google.inject.Inject;
@@ -37,8 +35,7 @@ import com.google.inject.Injector;
 import com.google.inject.name.Named;
 
 public class HttpProxy extends AbstractHttpProxy {
-	ServerSocket serverSocket;
-	
+	ServerSocket serverSocket;	
 	@Inject
 	HttpProxy(SocketFactory sockFactory, ServerSocketFactory srvSockFactory,
 
@@ -64,33 +61,6 @@ public class HttpProxy extends AbstractHttpProxy {
 	 * 
 	 * @param hm A HashMap containing the request's information.
 	 */
-	public void receiveRequestFromClientSocket(HashMap<String, String> hm) {
-		hm.get("url");
-		hm.get("headers");
-		hm.get("response");
-		hm.get("lastmodified");
-	}
-	
-	/**
-	 * Creates a client socket and connects it to the server socket.
-	 * @param host The website hostname.
-	 * @return A new client socket connected with the server socket,
-	 * both sockets having the same port number.
-	 */
-	public Socket createClientSocket(String host) {
-		try {
-			Socket clientSocket = sockFactory.createSocket(host, port);
-			clientSocket.connect(serverSocket.getLocalSocketAddress());
-			return clientSocket;
-		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return null;
-	}
 	
 	@Override
 	//I have been looking at this tutorial: 
@@ -106,26 +76,30 @@ public class HttpProxy extends AbstractHttpProxy {
 	public void start() {
 		/* We'll need to get cache entries from previous instances of the proxy. */
 		//String[] = ourDatabase.getPreviousCacheEntries();  
+		if (!serverSocket.isBound()) {
+			System.out.println("Not bound!");
+		}
+        // Set up the HTTP protocol processor
         HttpProcessor httpproc = HttpProcessorBuilder.create()
-                .add(new RequestContent())
-                .add(new RequestTargetHost())
-                .add(new RequestConnControl())
-                .add(new RequestUserAgent("Test/1.1"))
-                .add(new RequestExpectContinue(true)).build();
+                .add(new ResponseDate())
+                .add(new ResponseServer("Test/1.1"))
+                .add(new ResponseContent())
+                .add(new ResponseConnControl()).build();
 
-            HttpRequestExecutor httpexecutor = new HttpRequestExecutor();
+        // Set up request handlers
+        UriHttpRequestHandlerMapper reqistry = new UriHttpRequestHandlerMapper();
+        HttpRequestHandler handler = new OurRequestHandler();
+        reqistry.register("*", handler);
 
-            HttpCoreContext coreContext = HttpCoreContext.create();
-            HttpHost host = new HttpHost("localhost", port);
-            coreContext.setTargetHost(host);
-            
-            DefaultBHttpClientConnection conn = new DefaultBHttpClientConnection(8 * 1024);
-            ConnectionReuseStrategy connStrategy = DefaultConnectionReuseStrategy.INSTANCE;
+        // Set up the HTTP service
+        HttpService httpService = new HttpService(httpproc, reqistry);
+    	HttpConnectionFactory<DefaultBHttpServerConnection> connFactory = DefaultBHttpServerConnectionFactory.INSTANCE;
+
+            BasicHttpContext coreContext = new BasicHttpContext(null);
             while (true) {
             	try {
-                    if (!conn.isOpen()) {
         				Socket socket = serverSocket.accept();
-        	            conn.bind(socket);
+        	            HttpServerConnection conn = connFactory.createConnection(socket);
         				BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         				String firstLine = in.readLine();
         				if (!firstLine.startsWith("GET") || firstLine.length()<14 ||
@@ -133,8 +107,7 @@ public class HttpProxy extends AbstractHttpProxy {
         					System.out.println("Bad request");
         				}
         			    String req = firstLine.substring(4, firstLine.length()-9).trim();
-        			    if (req.indexOf("..")!=-1 || 
-        				req.indexOf("/.ht")!=-1 || req.endsWith("~")) {
+        			    if (req.indexOf("..")!=-1 || req.indexOf("/.ht")!=-1 || req.endsWith("~")) {
         			    	System.out.println("Probably a hacker");
         			    }
         	            BasicHttpRequest request = new BasicHttpRequest("GET", req);
@@ -147,7 +120,18 @@ public class HttpProxy extends AbstractHttpProxy {
                         	String headerValue = newLine.substring(colonIndex+2, newLine.length());
                         	request.addHeader(headerName, headerValue);
                         }
-                        HttpResponse response = null;
+                        /* Print all the headers to the console:
+                    	Header[] allHeaders = request.getAllHeaders();
+                    	for (Header h : allHeaders) {
+                    		System.out.println(h.getName() + " " + h.getValue());
+                    	}
+                    	*/
+                        System.out.println(conn.isOpen());
+                    	httpService.handleRequest(conn, coreContext);
+                    	System.out.println(handler.toString());
+                        /*HttpResponse response = null;
+            			//OutputStream out = new BufferedOutputStream(socket.getOutputStream());
+            			
                         try {
 							httpexecutor.preProcess(request, httpproc, coreContext);
 	                        response = httpexecutor.execute(request, conn, coreContext);
@@ -155,6 +139,7 @@ public class HttpProxy extends AbstractHttpProxy {
 						} catch (HttpException e) {
 							e.printStackTrace();
 						}
+						
 
 
                         System.out.println("<< Response: " + response.getStatusLine());
@@ -164,18 +149,21 @@ public class HttpProxy extends AbstractHttpProxy {
                             conn.close();
                         } else {
                             System.out.println("Connection kept alive...");
-                        }
-                    }
-                    
+                        } 
+                        */
             	} catch (IOException e) {
 					e.printStackTrace();
-            	}
+            	} catch (HttpException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
                 finally {
+                	/*
                     try {
 						conn.close();
 					} catch (IOException e) {
 						e.printStackTrace();
-					}
+					}*/
                 }
             }
     }
