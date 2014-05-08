@@ -1,12 +1,9 @@
 package il.technion.cs236369.proxy;
 
-import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.HashMap;
 import java.util.Properties;
 
 import javax.net.ServerSocketFactory;
@@ -14,11 +11,10 @@ import javax.net.SocketFactory;
 
 import org.apache.http.HttpConnectionFactory;
 import org.apache.http.HttpException;
-import org.apache.http.HttpServerConnection;
 import org.apache.http.impl.DefaultBHttpServerConnection;
 import org.apache.http.impl.DefaultBHttpServerConnectionFactory;
-import org.apache.http.message.BasicHttpRequest;
 import org.apache.http.protocol.BasicHttpContext;
+import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpProcessor;
 import org.apache.http.protocol.HttpProcessorBuilder;
 import org.apache.http.protocol.HttpRequestHandler;
@@ -35,7 +31,8 @@ import com.google.inject.Injector;
 import com.google.inject.name.Named;
 
 public class HttpProxy extends AbstractHttpProxy {
-	ServerSocket serverSocket;	
+	ServerSocket serverSocket;
+	DefaultBHttpServerConnection conn;
 	@Inject
 	HttpProxy(SocketFactory sockFactory, ServerSocketFactory srvSockFactory,
 
@@ -95,11 +92,12 @@ public class HttpProxy extends AbstractHttpProxy {
         HttpService httpService = new HttpService(httpproc, reqistry);
     	HttpConnectionFactory<DefaultBHttpServerConnection> connFactory = DefaultBHttpServerConnectionFactory.INSTANCE;
 
-            BasicHttpContext coreContext = new BasicHttpContext(null);
+            HttpContext coreContext = new BasicHttpContext();
             while (true) {
             	try {
         				Socket socket = serverSocket.accept();
-        	            HttpServerConnection conn = connFactory.createConnection(socket);
+        	            DefaultBHttpServerConnection conn = connFactory.createConnection(socket);
+        	            /*
         				BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         				String firstLine = in.readLine();
         				if (!firstLine.startsWith("GET") || firstLine.length()<14 ||
@@ -120,15 +118,18 @@ public class HttpProxy extends AbstractHttpProxy {
                         	String headerValue = newLine.substring(colonIndex+2, newLine.length());
                         	request.addHeader(headerName, headerValue);
                         }
+                        */
                         /* Print all the headers to the console:
                     	Header[] allHeaders = request.getAllHeaders();
                     	for (Header h : allHeaders) {
                     		System.out.println(h.getName() + " " + h.getValue());
                     	}
                     	*/
-                        System.out.println(conn.isOpen());
+                        //System.out.println(coreContext.toString());
+                        //HttpConnectionMetrics met = conn.getMetrics();
+                        //System.out.println(met.getRequestCount());
                     	httpService.handleRequest(conn, coreContext);
-                    	System.out.println(handler.toString());
+                    	System.out.println("Out");
                         /*HttpResponse response = null;
             			//OutputStream out = new BufferedOutputStream(socket.getOutputStream());
             			
@@ -158,12 +159,13 @@ public class HttpProxy extends AbstractHttpProxy {
 					e.printStackTrace();
 				}
                 finally {
-                	/*
+                	System.out.println("Finally");
+                	
                     try {
 						conn.close();
-					} catch (IOException e) {
+					} catch (Exception e) {
 						e.printStackTrace();
-					}*/
+					}
                 }
             }
     }

@@ -20,7 +20,7 @@ public class OurRequestHandler implements HttpRequestHandler {
 	@Override
 	public void handle(HttpRequest request, HttpResponse response, HttpContext context)
 			throws HttpException, IOException {
-		
+		System.out.println("Handling");
         String method = request.getRequestLine().getMethod().toUpperCase(Locale.ENGLISH);
         if (!method.equals("GET") && !method.equals("HEAD") && !method.equals("POST")) {
             throw new MethodNotSupportedException(method + " method not supported");
@@ -38,7 +38,6 @@ public class OurRequestHandler implements HttpRequestHandler {
         response.setEntity(entity);
 
         
-		System.out.println("Handling");
 		System.out.println("arg0: " + request);
 		System.out.println(response);
 		System.out.println(context);

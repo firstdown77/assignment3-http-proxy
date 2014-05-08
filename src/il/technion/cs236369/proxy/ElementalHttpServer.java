@@ -240,7 +240,7 @@ public class ElementalHttpServer {
         @Override
         public void run() {
             System.out.println("New connection thread");
-            HttpContext context = new BasicHttpContext(null);
+            HttpContext context = new BasicHttpContext();
             try {
                 while (!Thread.interrupted() && this.conn.isOpen()) {
                     this.httpservice.handleRequest(this.conn, context);
