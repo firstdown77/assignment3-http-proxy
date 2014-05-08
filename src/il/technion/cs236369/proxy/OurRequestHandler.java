@@ -1,6 +1,7 @@
 package il.technion.cs236369.proxy;
 
 import java.io.IOException;
+import java.net.URLDecoder;
 import java.util.Locale;
 
 import org.apache.http.HttpEntity;
@@ -26,20 +27,19 @@ public class OurRequestHandler implements HttpRequestHandler {
             throw new MethodNotSupportedException(method + " method not supported");
         }
         String target = request.getRequestLine().getUri();
-
+        String decodedTarget = URLDecoder.decode(target, "UTF-8");
         if (request instanceof HttpEntityEnclosingRequest) {
             HttpEntity entity = ((HttpEntityEnclosingRequest) request).getEntity();
             byte[] entityContent = EntityUtils.toByteArray(entity);
             System.out.println("Incoming entity content (bytes): " + entityContent.length);
         }
-        
         response.setStatusCode(HttpStatus.SC_OK);
-        StringEntity entity = new StringEntity(target);
+        StringEntity entity = new StringEntity(decodedTarget);
         response.setEntity(entity);
 
         
-		System.out.println("arg0: " + request);
-		System.out.println(response);
+		//System.out.println("arg0: " + request);
+		//System.out.println(response);
 		System.out.println(context);
 	}
 
