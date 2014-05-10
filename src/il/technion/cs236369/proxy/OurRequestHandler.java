@@ -23,7 +23,7 @@ public class OurRequestHandler implements HttpRequestHandler {
     private HttpRequestExecutor httpexecutor;
     private ConnectionReuseStrategy connStrategy;
     
-    //private static final String HTTP_IN_CONN = "http.proxy.in-conn";
+    private static final String HTTP_IN_CONN = "http.proxy.in-conn";
     private static final String HTTP_OUT_CONN = "http.proxy.out-conn";
     private static final String HTTP_CONN_KEEPALIVE = "http.proxy.conn-keepalive";
 
@@ -40,7 +40,6 @@ public class OurRequestHandler implements HttpRequestHandler {
 	public void handle(HttpRequest request, HttpResponse response, HttpContext context)
 			throws HttpException, IOException {
 		
-		System.out.println("Handling");
         String method = request.getRequestLine().getMethod().toUpperCase(Locale.ENGLISH);
         /*if (!method.equals("GET") && !method.equals("HEAD") && !method.equals("POST")) {
             throw new MethodNotSupportedException(method + " method not supported");
@@ -60,7 +59,6 @@ public class OurRequestHandler implements HttpRequestHandler {
         context.setAttribute(HttpCoreContext.HTTP_TARGET_HOST, this.target);
         
         System.out.println(">> Request URI: " + request.getRequestLine().getUri());
-
         
         // Remove hop-by-hop headers
         request.removeHeaders(HTTP.CONTENT_LEN);
@@ -73,6 +71,7 @@ public class OurRequestHandler implements HttpRequestHandler {
         request.removeHeaders("Upgrade");
         
         this.httpexecutor.preProcess(request, this.httpproc, context);
+        System.out.println(request);
         HttpResponse targetResponse = this.httpexecutor.execute(request, conn, context);
         this.httpexecutor.postProcess(response, this.httpproc, context);
         
@@ -84,7 +83,7 @@ public class OurRequestHandler implements HttpRequestHandler {
         targetResponse.removeHeaders("TE");
         targetResponse.removeHeaders("Trailers");
         targetResponse.removeHeaders("Upgrade");
-        
+                        
         if (targetResponse.containsHeader("no-cache")) {
         	//store in cache if necessary but do not serve from cache.  Serve from fresh response.
         }

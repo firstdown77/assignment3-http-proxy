@@ -2,10 +2,8 @@ package il.technion.cs236369.proxy;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.Properties;
 
 import javax.net.ServerSocketFactory;
@@ -62,7 +60,7 @@ public class HttpProxy extends AbstractHttpProxy {
 		super(sockFactory, srvSockFactory, port, dbURL, dbName, tblName,
 				dbUsername, dbPassword, dbDriver);
 	}
-
+	
 	/**
 	 * The HashMap contains the following according to the assignment instructions:
 	 * 1. URL
@@ -108,7 +106,7 @@ public class HttpProxy extends AbstractHttpProxy {
         // Set up the HTTP service
         HttpService httpService = new HttpService(inhttpproc, reqistry);
         HttpContext coreContext = new BasicHttpContext(null);
-           while (true) {
+        while (true) {
            	try {
         			Socket insocket = serverSocket.accept();
                     DefaultBHttpServerConnection inconn = new DefaultBHttpServerConnection(BUFSIZE);
@@ -139,6 +137,7 @@ public class HttpProxy extends AbstractHttpProxy {
 				e.printStackTrace();
 			}
             finally {
+            	/*
             	try {
             		if (!insocket.isClosed()) {
     					insocket.close();
@@ -149,6 +148,7 @@ public class HttpProxy extends AbstractHttpProxy {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
+				*/
             }
         }
     }

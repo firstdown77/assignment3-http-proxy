@@ -29,7 +29,6 @@ package il.technion.cs236369.proxy;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
