@@ -1,6 +1,7 @@
 package il.technion.cs236369.proxy;
 
 import java.io.IOException;
+import java.util.Locale;
 
 import org.apache.http.ConnectionReuseStrategy;
 import org.apache.http.HttpClientConnection;
@@ -38,10 +39,10 @@ public class OurRequestHandler implements HttpRequestHandler {
 	@Override
 	public void handle(HttpRequest request, HttpResponse response, HttpContext context)
 			throws HttpException, IOException {
-		/*
+		
 		System.out.println("Handling");
         String method = request.getRequestLine().getMethod().toUpperCase(Locale.ENGLISH);
-        if (!method.equals("GET") && !method.equals("HEAD") && !method.equals("POST")) {
+        /*if (!method.equals("GET") && !method.equals("HEAD") && !method.equals("POST")) {
             throw new MethodNotSupportedException(method + " method not supported");
         }
         String target = request.getRequestLine().getUri();
@@ -83,6 +84,15 @@ public class OurRequestHandler implements HttpRequestHandler {
         targetResponse.removeHeaders("TE");
         targetResponse.removeHeaders("Trailers");
         targetResponse.removeHeaders("Upgrade");
+        
+        if (targetResponse.containsHeader("no-cache")) {
+        	//store in cache if necessary but do not serve from cache.  Serve from fresh response.
+        }
+        
+        if (!targetResponse.containsHeader("no-cache") && !targetResponse.containsHeader("no-store") && targetResponse.toString().length() < 65535
+        		&& method.equals("GET") && targetResponse.getStatusLine().getStatusCode() == 200 && targetResponse.containsHeader("Last-Modified")) {
+        	//may serve from cache if necessary.
+        }
         
         response.setStatusLine(targetResponse.getStatusLine());
         response.setHeaders(targetResponse.getAllHeaders());
