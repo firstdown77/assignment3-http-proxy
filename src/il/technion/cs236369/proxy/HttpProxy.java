@@ -34,40 +34,13 @@ public class HttpProxy extends AbstractHttpProxy {
 				dbUsername, dbPassword, dbDriver);
 		// Add your code here
 	}
-
-	public void receiveRequestFromClientSocket(HashMap<String, String> hm) {
-		
-	}
-	
-	/**
-	 * Creates a client socket and connects it to the server socket.
-	 * @param host The website hostname.
-	 * @return A new client socket connected with the server socket,
-	 * both sockets having the same port number.
-	 */
-	public Socket createClientSocket(String host) {
-		try {
-			Socket clientSocket = sockFactory.createSocket(host, port);
-			clientSocket.connect(serverSocket.getLocalSocketAddress());
-			return clientSocket;
-		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return null;
-	}
 	
 	@Override
 	//I have been looking at this tutorial: 
 	//docs.oracle.com/javase/tutorial/displayCode.html?code=http://docs.oracle.com/javase/tutorial/networking/sockets/examples/KnockKnockServer.java
 	public void bind() throws IOException {
-		serverSocket = srvSockFactory.createServerSocket(port); //This line does the bind.
+		serverSocket = srvSockFactory.createServerSocket(port); 
 		
-		//clientSocket = sockFactory.createSocket();
-		//clientSocket.connect(serverSocket.getLocalSocketAddress());
 	}
 
 	@Override
@@ -77,10 +50,12 @@ public class HttpProxy extends AbstractHttpProxy {
         //Need to use HTTPCore here.
 		while (true) {
 			try {
-				serverSocket.accept();
+				Socket socket = serverSocket.accept();
+				ProxyRequestHandler handler = new ProxyRequestHandler(socket);
+				handler.serveRequest();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(System.err);
 			}
 		}
 	}
