@@ -12,6 +12,7 @@ import java.util.Collection;
  */
 public interface IPageResponseDAO 
 {
+	
 	/**
 	 * opens the connection to the underlying storage system
 	 */
@@ -47,4 +48,7 @@ public interface IPageResponseDAO
      * @return True if save successful, false if failed.
      */
 	boolean savePageResponse(PageResponse page);
+	
+	void destroyTable();
+	void buildTable();
 }

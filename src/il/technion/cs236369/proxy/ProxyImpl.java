@@ -2,15 +2,20 @@ package il.technion.cs236369.proxy;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.util.Locale;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpEntityEnclosingRequest;
-import org.apache.http.HttpException;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
+import javax.net.SocketFactory;
+
 import org.apache.http.impl.DefaultBHttpServerConnection;
-import org.apache.http.util.EntityUtils;
+import org.apache.http.protocol.BasicHttpContext;
+import org.apache.http.protocol.HttpContext;
+import org.apache.http.protocol.HttpProcessor;
+import org.apache.http.protocol.HttpProcessorBuilder;
+import org.apache.http.protocol.HttpService;
+import org.apache.http.protocol.ResponseConnControl;
+import org.apache.http.protocol.ResponseContent;
+import org.apache.http.protocol.ResponseDate;
+import org.apache.http.protocol.ResponseServer;
+import org.apache.http.protocol.UriHttpRequestHandlerMapper;
 
 /**
  * Handles a single request from a client
@@ -18,21 +23,23 @@ import org.apache.http.util.EntityUtils;
  *
  */
 public class ProxyImpl {
-
-	DefaultBHttpServerConnection conn;
 	
-	public ProxyImpl(Socket socket) throws IOException
+	public ProxyImpl() throws IOException
 	{
-		System.out.println("Request received from "+socket.getInetAddress());
-		conn = new DefaultBHttpServerConnection(8 * 1024);
-		conn.bind(socket);
+	
 	}
 	
-	public void serveRequest() throws IOException
+	public void serveRequest(Socket socket, SocketFactory sFactory) throws IOException
 	{
+		print("Request received from "+socket.getInetAddress());
+		
+		
+		DefaultBHttpServerConnection conn = null;
 		try
 		{
-			HttpRequest request = conn.receiveRequestHeader();
+			ProxyHandler handler = new ProxyHandler(sFactory);
+			//handler.manualHandle();
+			/*HttpRequest request = conn.receiveRequestHeader();
 			print(request.getRequestLine().getUri());///
 			String method = request.getRequestLine().getMethod().toUpperCase(Locale.ENGLISH);
 			if (method.equals("GET"))
@@ -46,16 +53,36 @@ public class ProxyImpl {
 				        EntityUtils.consume(entity);
 				    }
 				}
-			}
-		}
-		catch (HttpException e)
-		{
+			}*/
 			
+			 // Set up the HTTP protocol processor
+	       HttpProcessor httpproc = HttpProcessorBuilder.create()
+	                .add(new ResponseDate())
+	                .add(new ResponseServer("Test/1.1"))
+	                .add(new ResponseContent())
+	                .add(new ResponseConnControl()).build();
+	        // Set up request handler
+	        UriHttpRequestHandlerMapper reqistry = new UriHttpRequestHandlerMapper();
+	        reqistry.register("*", handler);
+	        // Set up the HTTP service
+	        HttpService httpService = new HttpService(httpproc, reqistry);
+	        HttpContext coreContext = new BasicHttpContext(null);
+	        
+	        conn = new DefaultBHttpServerConnection(ProxyHandler.BUFSIZE);
+	    	conn.bind(socket);
+	    	
+			httpService.handleRequest(conn, coreContext);
+		}
+		catch (Exception e)
+		{
 			throw new IOException(e);
 		}
 		finally
 		{
-			conn.shutdown();
+			if (socket != null)
+				socket.close();
+			//if (conn != null)
+				//conn.close();
 		}
 	}
 	
