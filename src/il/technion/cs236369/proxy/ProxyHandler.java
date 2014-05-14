@@ -27,6 +27,7 @@ public class ProxyHandler implements HttpRequestHandler {
     //CloseableHttpClient client = HttpClients.createDefault();
 	private Cache theCache;
 	private SocketFactory sFactory;
+	private Socket socketToWebServer;
     
     
     public final static int BUFSIZE = 8 * 1024;
@@ -37,37 +38,38 @@ public class ProxyHandler implements HttpRequestHandler {
 		theCache = new Cache();
     }
     
-    /*
-     * Workaround instead of a service handler to use the socketfactory and pass the basic test
-     * 
-     */
+    public void close()
+    {
+    	if (socketToWebServer != null)
+			try{socketToWebServer.close();}catch (Exception e){}
+    }
     
 	@Override
 	public void handle(HttpRequest request, HttpResponse response, HttpContext context)
-			{
-		String target;
-		String method = request.getRequestLine().getMethod().toUpperCase(Locale.ENGLISH);
-		print(method);
-        if (!method.equals("GET") && !method.equals("HEAD")) {
-        	print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Bypassing method: "+method);
-        	//HttpResponse resp = bypassProxy(request);
-            //response.setHeaders(resp.getAllHeaders());
-            //response.setEntity(resp.getEntity());
-        	//throw new MethodNotSupportedException(method + " method not supported");
-        	response.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR);
-        	return;
-        }
-        
-        DefaultBHttpClientConnection connToWeb = null;
-		Socket socketToWebServer = null;
+	{
+		DefaultBHttpClientConnection connToWeb = null;
+		socketToWebServer = null;
 	    try
 		{
-	        target = request.getRequestLine().getUri();
+			String target;
+			target = request.getRequestLine().getUri();
 	        print(target);
-	      
+			String method = request.getRequestLine().getMethod().toUpperCase(Locale.ENGLISH);
+			print(method);
+			
+	        if (!method.equals("GET") && !method.equals("HEAD")) {
+	        	print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Bypassing method: "+method);
+	        	//bypassProxy(connToWeb, request, response);
+	            //response.setHeaders(resp.getAllHeaders());
+	            //response.setEntity(resp.getEntity());
+	        	//throw new MethodNotSupportedException(method + " method not supported");
+	        	response.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR);
+	        	return;
+	        }
+	        
 	        URI uri = encodeUrl(target);
 			if (uri == null) throw new IOException("Malformed URL requesting a page from server");
-			connToWeb = new DefaultBHttpClientConnection(BUFSIZE);			
+	        connToWeb = new DefaultBHttpClientConnection(BUFSIZE);			
 			URL url = new URL(uri.toString());
 			int port;
 			if (url.getPort() <= 0)
@@ -77,11 +79,15 @@ public class ProxyHandler implements HttpRequestHandler {
 			socketToWebServer = sFactory.createSocket(url.getHost(), port);
 			connToWeb.bind(socketToWebServer);
 			
+			
 	        PageResponse page = cacheDecissionTree(connToWeb, socketToWebServer, request, uri);
 	        
 	        response.setStatusCode(page.getStatus());
+	        
+	        //Put automatically by the protocol interceptor
 	        page.removeHeader("Content-Length");
 	        page.removeHeader("Transfer-Encoding");
+	        
 	        response.setHeaders(page.getHeaders());
 	        byte[] bytes = page.getBodyBytes();
 	        if ((bytes != null)&&(bytes.length > 0))
@@ -94,21 +100,12 @@ public class ProxyHandler implements HttpRequestHandler {
 	        	//memory --> Streamed 
 	        	response.setEntity(page.getBody());
 	        }
-	        
-	        
 		}
 		catch (Exception e)
 		{
 			e.printStackTrace(System.err);
 			response.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR);
 			response.setReasonPhrase("Internal Server Error.");
-		}
-		finally
-		{
-			//if (connToWeb != null)
-				//try{connToWeb.close();}catch (Exception e){}
-			if (socketToWebServer != null)
-				try{socketToWebServer.close();}catch (Exception e){}
 		}
 	    print("<< Response: " + response.getStatusLine());
 	}
@@ -117,6 +114,32 @@ public class ProxyHandler implements HttpRequestHandler {
 	{
 		System.out.println(message);
 	}
+	
+	/*private void bypassProxy(DefaultBHttpClientConnection connToWeb, HttpRequest request, HttpResponse response) throws IOException
+	{
+		HttpEntity theEntity = null;
+		try
+		{	
+			String target = request.getRequestLine().getUri();
+	        URI uri = encodeUrl(target);
+			HttpRequest requestToWebServer = new BasicHttpRequest(request.getRequestLine().getMethod(), 
+					uri.toString()); 
+			for (Header h: request.getAllHeaders())
+				requestToWebServer.addHeader(h);
+			
+			connToWeb.sendRequestHeader(requestToWebServer);
+			connToWeb.flush();
+			HttpResponse responseFromClient = connToWeb.receiveResponseHeader();
+			connToWeb.receiveResponseEntity(responseFromClient);
+			theEntity = responseFromClient.getEntity();
+			response.setHeaders(responseFromClient.getAllHeaders());
+			response.setEntity(theEntity);
+		}
+		catch (Exception ioe)
+		{
+			throw new IOException(ioe);
+		}
+	}*/
 	
 	private PageResponse cacheDecissionTree(DefaultBHttpClientConnection connToWeb, Socket socketToWebServer, HttpRequest request, URI uri) throws IOException
 	{
@@ -193,7 +216,9 @@ public class ProxyHandler implements HttpRequestHandler {
 	{
 		try
 		{
-			theCache.saveInCache(page);
+			//Avoid caching transfer-encoding pages
+			if (!page.isTransferEncoding())
+				theCache.saveInCache(page);
 		}
 		catch (IllegalArgumentException iae)
 		{
@@ -220,7 +245,7 @@ public class ProxyHandler implements HttpRequestHandler {
 		{	
 			HttpRequest requestToWebServer = new BasicHttpRequest("GET", page);
 			for (Header h: headers)
-				if (h.getName() != "Connection")
+				if ((!h.getName().equals("Connection"))&&(!h.getName().equals("Accept-Encoding")))
 					requestToWebServer.addHeader(h);
 			requestToWebServer.addHeader("Connection", "close");
 			if (validationDate != null)
@@ -255,8 +280,14 @@ public class ProxyHandler implements HttpRequestHandler {
 	        	modHeader = modHeaders[0].getValue();
 	        connToWeb.receiveResponseEntity(responseFromClient);
 	        HttpEntity theEntity = responseFromClient.getEntity();
-	        return new PageResponse(page, statusCode, responseFromClient.getAllHeaders(), nocache, 
+	        
+	        PageResponse pageResponse =new PageResponse(page, statusCode, responseFromClient.getAllHeaders(), nocache, 
 	        		nostore, theEntity, modHeader);
+	        
+	        Header encodingHeader = responseFromClient.getFirstHeader("Transfer-Encoding");
+	        if (encodingHeader != null)
+	        	pageResponse.setTransferEncoding(true);
+	        return pageResponse;
 		}
 		catch (HttpException hte)
 		{

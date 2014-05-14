@@ -32,7 +32,15 @@ public class PageResponse {
 	
 	String url;
 	Header[] headers;
-	boolean noCache, noStore = false;
+	boolean noCache, noStore, transferEncoding = false;
+	public boolean isTransferEncoding() {
+		return transferEncoding;
+	}
+
+	public void setTransferEncoding(boolean transferEncoding) {
+		this.transferEncoding = transferEncoding;
+	}
+
 	HttpEntity body;
 	String lastModified = "";
 	

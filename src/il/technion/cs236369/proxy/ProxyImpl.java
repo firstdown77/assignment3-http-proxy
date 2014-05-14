@@ -72,6 +72,7 @@ public class ProxyImpl {
 	    	conn.bind(socket);
 	    	
 			httpService.handleRequest(conn, coreContext);
+			handler.close();
 		}
 		catch (Exception e)
 		{

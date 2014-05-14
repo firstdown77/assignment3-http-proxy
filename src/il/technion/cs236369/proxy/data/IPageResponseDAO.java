@@ -2,7 +2,6 @@ package il.technion.cs236369.proxy.data;
 
 import il.technion.cs236369.proxy.PageResponse;
 
-import java.util.Collection;
 
 /**
  * Interface for the storage system
