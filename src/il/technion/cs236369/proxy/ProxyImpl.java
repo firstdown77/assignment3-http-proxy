@@ -18,17 +18,28 @@ import org.apache.http.protocol.ResponseServer;
 import org.apache.http.protocol.UriHttpRequestHandlerMapper;
 
 /**
- * Handles a single request from a client
- * @author david
+ * Raphael Astrow (922130174 - rastrow@andrew.cmu.edu) and David Sainz (927902023 - dsainz@cs.technion.ac.il)
+ * Handles a single request from a client.
+ * @author Raphael Astrow (922130174 - rastrow@andrew.cmu.edu) and David Sainz (927902023 - dsainz@cs.technion.ac.il)
  *
  */
 public class ProxyImpl {
 	
+	/**
+	 * Default constructor 
+	 * @throws IOException may throw IOException.
+	 */
 	public ProxyImpl() throws IOException
 	{
 	
 	}
 	
+	/**
+	 * Serves a single HTTP request.
+	 * @param socket The socket to the web server.
+	 * @param sFactory The socket factory given in the assignment.
+	 * @throws IOException May throw an IOException.
+	 */
 	public void serveRequest(Socket socket, SocketFactory sFactory) throws IOException
 	{
 		print("Request received from "+socket.getInetAddress());
@@ -87,6 +98,10 @@ public class ProxyImpl {
 		}
 	}
 	
+	/**
+	 * Simple print message to console method.
+	 * @param message The message to print.
+	 */
 	private void print(String message)
 	{
 		System.out.println(message);

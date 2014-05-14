@@ -13,6 +13,11 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.name.Named;
 
+/**
+ * Raphael Astrow (922130174 - rastrow@andrew.cmu.edu) and David Sainz (927902023 - dsainz@cs.technion.ac.il)
+ * @author Raphael Astrow (922130174 - rastrow@andrew.cmu.edu) and David Sainz (927902023 - dsainz@cs.technion.ac.il)
+ *
+ */
 public class HttpProxy extends AbstractHttpProxy {
 	private ServerSocket serverSocket;
 	
@@ -32,12 +37,17 @@ public class HttpProxy extends AbstractHttpProxy {
 				dbUsername, dbPassword, dbDriver);
 	}
 	
+	/**
+	 * The required bind method creates and binds a server socket.
+	 */
 	@Override
 	public void bind() throws IOException {
 		serverSocket = srvSockFactory.createServerSocket(port); 
-		//socket = sockFactory.createSocket();
 	}
 
+	/**
+	 * The required start method that wraps our proxy implementation.
+	 */
 	@Override
 	public void start() {
        
@@ -47,11 +57,7 @@ public class HttpProxy extends AbstractHttpProxy {
                     ProxyImpl proxy = new ProxyImpl();
                     proxy.serveRequest(serverSocket.accept(), sockFactory);
            	}
-           	/*catch (SocketTimeoutException e) {
-           		//TODO confirm we want this exception handler.
-           		shouldShutdown = false;
-           		e.printStackTrace(System.err);
-        	}*/ catch (IOException e) {
+        	catch (IOException e) {
 				e.printStackTrace(System.err);
         	} catch (Exception e) {
 				e.printStackTrace(System.err);

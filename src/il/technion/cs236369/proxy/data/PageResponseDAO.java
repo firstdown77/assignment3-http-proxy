@@ -18,6 +18,12 @@ import com.google.inject.name.Named;
 
 import il.technion.cs236369.proxy.PageResponse;
 
+/**
+ * Raphael Astrow (922130174 - rastrow@andrew.cmu.edu) and David Sainz (927902023 - dsainz@cs.technion.ac.il)
+ * Please refer to IPageResponseDAO for Javadoc entries.
+ * @author Raphael Astrow (922130174 - rastrow@andrew.cmu.edu) and David Sainz (927902023 - dsainz@cs.technion.ac.il)
+ *
+ */
 public class PageResponseDAO implements IPageResponseDAO {
 
 	private static int MAX_URL_LENGTH = 255;
@@ -49,6 +55,9 @@ public class PageResponseDAO implements IPageResponseDAO {
 		this.dbDriver = dbDriver;
 	}
 	
+	/**
+	 * Open a cache connection.
+	 */
 	@Override
 	public void open() {
 		if (isOpen) return;
@@ -62,6 +71,9 @@ public class PageResponseDAO implements IPageResponseDAO {
         }
 	}
 
+	/**
+	 * Close a cache connection.
+	 */
 	@Override
 	public void close() {
 		isOpen = false;
@@ -85,6 +97,9 @@ public class PageResponseDAO implements IPageResponseDAO {
 			return url;
 	}
 
+	/**
+	 * Gets the page response from the cache.
+	 */
 	@Override
 	public PageResponse getPageResponse(String url) {
 		PreparedStatement stmt = null;
@@ -135,12 +150,21 @@ public class PageResponseDAO implements IPageResponseDAO {
 		}
 	}
 
+	/**
+	 * Deletes a page response from the cache. Wrapper function.
+	 */
 	@Override
 	public boolean deletePageResponse(String url)
 	{
 		return deletePageResponse(url, true);
 	}
 	
+	/**
+	 * Inner function to delete page response.
+	 * @param url URL to delete
+	 * @param close Whether or not to close the cache.
+	 * @return
+	 */
 	private boolean deletePageResponse(String url, boolean close) {
 		PreparedStatement stmt = null;
 
@@ -214,6 +238,9 @@ public class PageResponseDAO implements IPageResponseDAO {
 		}
 	}
 
+	/**
+	 * Destroys a cache table.  Given in assignment.
+	 */
 	@Override
 	public void destroyTable() {
 		Statement stmt = null;
@@ -235,6 +262,9 @@ public class PageResponseDAO implements IPageResponseDAO {
 		}
 	}
 
+	/**
+	 * Builds a cache table.  Given in assignment.
+	 */
 	@Override
 	public void buildTable() {
 		Statement stmt = null;

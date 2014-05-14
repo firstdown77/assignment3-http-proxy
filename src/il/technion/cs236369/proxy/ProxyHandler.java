@@ -22,6 +22,12 @@ import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 import org.apache.http.util.EntityUtils;
 
+/**
+ * Raphael Astrow (922130174 - rastrow@andrew.cmu.edu) and David Sainz (927902023 - dsainz@cs.technion.ac.il)
+ * Our implementation of the HttpRequestHandler
+ * @author Raphael Astrow (922130174 - rastrow@andrew.cmu.edu) and David Sainz (927902023 - dsainz@cs.technion.ac.il)
+ *
+ */
 public class ProxyHandler implements HttpRequestHandler {
 	
     //CloseableHttpClient client = HttpClients.createDefault();
@@ -32,19 +38,30 @@ public class ProxyHandler implements HttpRequestHandler {
     
     public final static int BUFSIZE = 8 * 1024;
     
+    /**
+     * ProxyHandler constructor.  
+     * @param sfactory The socket factory provided in the assignment.
+     * @throws IOException The proxy encounters an IO exception.
+     */
     public ProxyHandler(SocketFactory sfactory) throws IOException {
         this.sFactory = sfactory;
 			
 		theCache = new Cache();
     }
     
+    /**
+     * Closes the socket to the web server.
+     */
     public void close()
     {
     	if (socketToWebServer != null)
 			try{socketToWebServer.close();}catch (Exception e){}
     }
     
-	@Override
+	/**
+	 * Our HttpRequestHandler implementation.
+	 */
+    @Override
 	public void handle(HttpRequest request, HttpResponse response, HttpContext context)
 	{
 		DefaultBHttpClientConnection connToWeb = null;
@@ -110,37 +127,25 @@ public class ProxyHandler implements HttpRequestHandler {
 	    print("<< Response: " + response.getStatusLine());
 	}
 	
+    /**
+     * Simple print to console method.
+     * @param message Message to print.
+     */
 	private void print(String message)
 	{
 		System.out.println(message);
 	}
 	
-	/*private void bypassProxy(DefaultBHttpClientConnection connToWeb, HttpRequest request, HttpResponse response) throws IOException
-	{
-		HttpEntity theEntity = null;
-		try
-		{	
-			String target = request.getRequestLine().getUri();
-	        URI uri = encodeUrl(target);
-			HttpRequest requestToWebServer = new BasicHttpRequest(request.getRequestLine().getMethod(), 
-					uri.toString()); 
-			for (Header h: request.getAllHeaders())
-				requestToWebServer.addHeader(h);
-			
-			connToWeb.sendRequestHeader(requestToWebServer);
-			connToWeb.flush();
-			HttpResponse responseFromClient = connToWeb.receiveResponseHeader();
-			connToWeb.receiveResponseEntity(responseFromClient);
-			theEntity = responseFromClient.getEntity();
-			response.setHeaders(responseFromClient.getAllHeaders());
-			response.setEntity(theEntity);
-		}
-		catch (Exception ioe)
-		{
-			throw new IOException(ioe);
-		}
-	}*/
-	
+	/**
+	 * The cache decision tree.
+	 * 
+	 * @param connToWeb The connection to the web.
+	 * @param socketToWebServer The socket to the web server.
+	 * @param request The request
+	 * @param uri The uri.
+	 * @return An appropriate page response.
+	 * @throws IOException This may throw an IOException.
+	 */
 	private PageResponse cacheDecissionTree(DefaultBHttpClientConnection connToWeb, Socket socketToWebServer, HttpRequest request, URI uri) throws IOException
 	{
 			Header[] h = request.getHeaders("Cache-Control");
